@@ -1,0 +1,28 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Generated artifacts
+output_frames/
+output_matches/
+broadcast_output.mp4
+tacticam_output.mp4
+input.mp4
+output.mp4
+yolo11n.pt
+*.pt
+
+# Logs
+run.log
+server.log
+webapp_run.log
+job_status.json
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+
+# Secrets
+.env
+.env.*

@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Soccer Player Re-ID · Track every player</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --panel: #151926;
+    --panel-2: #1c2131;
+    --border: #2a3040;
+    --text: #e9eef6;
+    --muted: #8b94ab;
+    --accent: #4cafef;
+    --accent-2: #6dd3a2;
+    --warn: #ffc24c;
+    --err: #ff6b6b;
+    --ok: #6dd3a2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(76,175,239,0.10), transparent 60%),
+      radial-gradient(900px 500px at 10% -10%, rgba(109,211,162,0.10), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+
+  /* Header */
+  header.top {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin-bottom: 1.75rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.8rem; }
+  .brand .logo {
+    width: 42px; height: 42px; border-radius: 11px;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    display: grid; place-items: center; font-size: 1.3rem; color: #0a0d12;
+  }
+  .brand .title { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.1px; }
+  .brand .tag { color: var(--muted); font-size: 0.85rem; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    padding: 0.32rem 0.7rem; border-radius: 999px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 0.82rem; color: var(--muted);
+  }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+
+  /* Hero */
+  .hero { text-align: center; margin: 1rem 0 2rem; }
+  .hero h1 {
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    line-height: 1.15; margin: 0 0 0.75rem;
+    letter-spacing: -0.02em;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p.lead {
+    color: var(--muted); font-size: 1.05rem;
+    max-width: 680px; margin: 0 auto;
+  }
+
+  /* Panels */
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.4rem 1.5rem;
+  }
+  .panel + .panel { margin-top: 1.1rem; }
+  .panel > h2 { margin: 0 0 1rem; font-size: 1.1rem; letter-spacing: 0.1px; }
+  .panel > h2 .num { color: var(--muted); font-weight: 500; margin-right: 0.35rem; }
+
+  /* Status */
+  .status {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center;
+  }
+  .status .icon {
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--panel-2); font-size: 1.3rem; line-height: 1;
+  }
+  .status .title-row { font-weight: 600; font-size: 1rem; }
+  .status .sub { color: var(--muted); font-size: 0.92rem; margin-top: 2px; }
+  .status.idle    .icon { background: #1e2a44; color: var(--accent); }
+  .status.running .icon { background: #3a2f14; color: var(--warn); }
+  .status.done    .icon { background: #1e3a2a; color: var(--ok); }
+  .status.error   .icon { background: #3a1e1e; color: var(--err); }
+  .status .elapsed { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.9rem; padding-right: 0.25rem; }
+  .progress {
+    margin-top: 0.85rem; height: 8px; background: var(--panel-2);
+    border-radius: 999px; overflow: hidden; border: 1px solid var(--border);
+  }
+  .progress .bar {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--accent-2), var(--accent));
+    transition: width 0.4s ease;
+  }
+
+  /* How-it-works — full width, aligned 4 columns */
+  .steps {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem;
+  }
+  @media (max-width: 820px) { .steps { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .steps { grid-template-columns: 1fr; } }
+  .step {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1rem 1.1rem; min-height: 128px;
+    display: flex; flex-direction: column; gap: 0.25rem;
+  }
+  .step .num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    color: #0a0d12; font-weight: 800; font-size: 0.85rem;
+    display: inline-grid; place-items: center; margin-bottom: 0.5rem;
+  }
+  .step b { font-size: 0.98rem; }
+  .step p { margin: 0.1rem 0 0; color: var(--muted); font-size: 0.86rem; }
+
+  /* Results */
+  .video-wrap {
+    background: #000; border-radius: 12px; overflow: hidden;
+    aspect-ratio: 16 / 9;
+    display: grid; place-items: center;
+  }
+  .video-wrap video { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .video-wrap .empty {
+    color: var(--muted); text-align: center; padding: 2rem 1.25rem;
+    background: var(--panel-2); border-radius: 12px;
+  }
+  .caption {
+    display: flex; justify-content: space-between; gap: 1rem;
+    color: var(--muted); font-size: 0.9rem; margin-top: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .caption .legend { display: inline-flex; gap: 0.35rem; align-items: center; }
+  .caption .swatches { display: inline-flex; gap: 4px; }
+  .sw { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.08); }
+
+  /* Upload */
+  .upload-zone {
+    position: relative;
+    border: 2px dashed var(--border); border-radius: 14px;
+    padding: 2rem 1.5rem; text-align: center;
+    background: #111522;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    cursor: pointer;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent); background: #142033;
+  }
+  .upload-zone.has-file {
+    border-style: solid; text-align: left;
+    display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center;
+  }
+  .upload-zone .up-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; color: var(--accent); }
+  .upload-zone.has-file .up-icon { font-size: 1.6rem; margin: 0; }
+  .upload-zone .big { font-size: 1.05rem; font-weight: 600; }
+  .upload-zone .small { color: var(--muted); font-size: 0.9rem; margin-top: 0.25rem; }
+  .upload-zone.has-file .filename { font-weight: 600; word-break: break-all; }
+  .upload-zone.has-file .filesize { color: var(--muted); font-size: 0.88rem; margin-top: 2px; }
+  input[type=file] { display: none; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    padding: 0.75rem 1.3rem; border-radius: 11px; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--text); font-size: 0.98rem; cursor: pointer;
+    transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
+    font-weight: 500;
+  }
+  .btn:hover { background: #242a38; }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary {
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    color: #0a0d12; border-color: transparent; font-weight: 700;
+    padding: 0.8rem 1.6rem;
+  }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.3); }
+  .btn.link { background: transparent; border-color: transparent; color: var(--muted); padding: 0.5rem 0.8rem; }
+  .btn.link:hover { color: var(--text); background: transparent; }
+
+  .upload-actions {
+    display: flex; gap: 0.75rem; margin-top: 1rem; align-items: center; flex-wrap: wrap; justify-content: center;
+  }
+
+  .upload-bar {
+    height: 6px; background: var(--panel-2); border-radius: 999px; overflow: hidden; margin-top: 0.85rem;
+    display: none;
+  }
+  .upload-bar .fill { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+  .upload-bar.visible { display: block; }
+
+  .tips {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: 1.25rem;
+  }
+  @media (max-width: 760px) { .tips { grid-template-columns: 1fr; } }
+  .tip {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.85rem 0.95rem; font-size: 0.88rem; color: var(--muted); display: flex; gap: 0.5rem;
+  }
+  .tip .ico { flex-shrink: 0; }
+  .tip strong { color: var(--text); display: block; margin-bottom: 2px; }
+
+  .toast {
+    position: fixed; bottom: 1.25rem; right: 1.25rem;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 11px;
+    padding: 0.9rem 1.05rem; max-width: 360px; font-size: 0.92rem;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    transform: translateY(120%); opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.err { border-color: #5a2a2a; }
+  .toast.ok  { border-color: #2a5a3a; }
+
+  footer {
+    color: var(--muted); font-size: 0.85rem; margin-top: 2.5rem; text-align: center;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header class="top">
+    <div class="brand">
+      <div class="logo">⚽</div>
+      <div>
+        <div class="title">Soccer Player Tracker</div>
+        <div class="tag">Detect & re-identify every player in a clip</div>
+      </div>
+    </div>
+    <div class="chip"><span class="dot"></span> Server online</div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <h1>Upload a match clip. See <span class="grad">every player tracked</span>.</h1>
+    <p class="lead">
+      AI finds every player in your video, gives each one a unique colored ID,
+      and keeps that ID the same across every frame — so you can follow individual players through the action.
+    </p>
+  </section>
+
+  <!-- STATUS -->
+  <section class="panel">
+    <div id="status" class="status idle">
+      <div class="icon" id="statusIcon">●</div>
+      <div>
+        <div class="title-row" id="statusTitle">Ready when you are</div>
+        <div class="sub" id="statusSub">Scroll down and upload a clip to get started.</div>
+        <div class="progress" id="progressWrap" style="display:none"><div class="bar" id="progressBar"></div></div>
+      </div>
+      <div class="elapsed" id="elapsed"></div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="panel">
+    <h2><span class="num">①→④</span> How it works</h2>
+    <div class="steps">
+      <div class="step">
+        <span class="num">1</span>
+        <b>Detect</b>
+        <p>YOLO finds every player in every frame of your video.</p>
+      </div>
+      <div class="step">
+        <span class="num">2</span>
+        <b>Fingerprint</b>
+        <p>ResNet turns each player crop into a unique visual vector.</p>
+      </div>
+      <div class="step">
+        <span class="num">3</span>
+        <b>Track</b>
+        <p>Fingerprints + positions link the same player across frames.</p>
+      </div>
+      <div class="step">
+        <span class="num">4</span>
+        <b>Render</b>
+        <p>Each player gets a stable colored box and ID number.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- UPLOAD -->
+  <section class="panel">
+    <h2>Upload your video</h2>
+    <form id="uploadForm">
+      <label class="upload-zone" id="dropzone" for="fileInput">
+        <div id="uzEmpty">
+          <span class="up-icon">⬆</span>
+          <div class="big">Click to browse or drag a video here</div>
+          <div class="small">MP4 works best · up to 500 MB · CPU takes ~1 min per second of footage</div>
+        </div>
+        <div id="uzFilled" style="display:none; display: contents;">
+          <!-- populated on file select -->
+        </div>
+      </label>
+      <input type="file" id="fileInput" name="video" accept="video/*" required>
+      <div class="upload-bar" id="uploadBar"><div class="fill" id="uploadFill"></div></div>
+
+      <div class="upload-actions">
+        <button id="uploadBtn" class="btn primary" type="submit">▶ Process video</button>
+        <button id="clearBtn" class="btn link" type="button" style="display:none">Clear</button>
+      </div>
+    </form>
+
+    <div class="tips">
+      <div class="tip"><span class="ico">⏱️</span><div><strong>Keep it short.</strong> Under 30 seconds is ideal on CPU.</div></div>
+      <div class="tip"><span class="ico">🎥</span><div><strong>Any angle works.</strong> Broadcast, overhead, or sideline — all fine.</div></div>
+      <div class="tip"><span class="ico">📁</span><div><strong>MP4 up to 500 MB.</strong> Other formats usually work but MP4 is safest.</div></div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="panel">
+    <h2>Your result</h2>
+    {% if output_ready %}
+      <div class="video-wrap">
+        <video controls playsinline preload="metadata" src="/video/result?v={{ cache_bust }}"></video>
+      </div>
+      <div class="caption">
+        <span class="legend">
+          <span class="swatches">
+            <span class="sw" style="background:#e65b5b"></span>
+            <span class="sw" style="background:#6dd3a2"></span>
+            <span class="sw" style="background:#4cafef"></span>
+            <span class="sw" style="background:#d8aa44"></span>
+          </span>
+          Each player gets a stable color + ID across frames
+        </span>
+        <span>💡 Watch a single colored box move — that's one player being tracked.</span>
+      </div>
+    {% else %}
+      <div class="empty">Your tracked video will appear here once processing completes.</div>
+    {% endif %}
+  </section>
+
+  <footer>
+    Built with YOLO · ResNet50 · OpenCV · Flask ·
+    <a href="https://github.com/thunder500" target="_blank" rel="noopener">thunder500</a>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let lastStatus = null;
+
+function formatSize(b) {
+  if (b < 1024) return b + " B";
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+  if (b < 1024 * 1024 * 1024) return (b / 1024 / 1024).toFixed(1) + " MB";
+  return (b / 1024 / 1024 / 1024).toFixed(2) + " GB";
+}
+
+function toast(msg, kind) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "toast " + (kind || "");
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 4000);
+}
+
+const dz = $("dropzone");
+const input = $("fileInput");
+const uzEmpty = $("uzEmpty");
+const clearBtn = $("clearBtn");
+
+function renderFilled(f) {
+  dz.classList.add("has-file");
+  uzEmpty.style.display = "none";
+  dz.innerHTML = `
+    <span class="up-icon">📹</span>
+    <div>
+      <div class="filename">${f.name}</div>
+      <div class="filesize">${formatSize(f.size)} · ${f.type || "video"}</div>
+    </div>
+    <span style="color: var(--accent-2); font-weight:600;">✓ ready</span>
+  `;
+  clearBtn.style.display = "inline-flex";
+}
+
+function resetZone() {
+  dz.classList.remove("has-file");
+  dz.innerHTML = `
+    <div id="uzEmpty">
+      <span class="up-icon">⬆</span>
+      <div class="big">Click to browse or drag a video here</div>
+      <div class="small">MP4 works best · up to 500 MB · CPU takes ~1 min per second of footage</div>
+    </div>
+  `;
+  input.value = "";
+  clearBtn.style.display = "none";
+}
+
+input.addEventListener("change", () => {
+  if (input.files[0]) renderFilled(input.files[0]);
+});
+
+clearBtn.addEventListener("click", resetZone);
+
+["dragenter", "dragover"].forEach(e => dz.addEventListener(e, (ev) => {
+  ev.preventDefault(); dz.classList.add("dragover");
+}));
+["dragleave", "drop"].forEach(e => dz.addEventListener(e, (ev) => {
+  ev.preventDefault(); dz.classList.remove("dragover");
+}));
+dz.addEventListener("drop", (ev) => {
+  const f = [...ev.dataTransfer.files].find(f => f.type.startsWith("video/"));
+  if (!f) { toast("Please drop a video file.", "err"); return; }
+  const dt = new DataTransfer();
+  dt.items.add(f);
+  input.files = dt.files;
+  renderFilled(f);
+});
+
+$("uploadForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const f = input.files[0];
+  if (!f) { toast("Please choose a video first.", "err"); return; }
+  const fd = new FormData();
+  fd.append("video", f);
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", "/upload");
+  xhr.upload.addEventListener("progress", (ev) => {
+    if (!ev.lengthComputable) return;
+    const pct = (ev.loaded / ev.total) * 100;
+    $("uploadBar").classList.add("visible");
+    $("uploadFill").style.width = pct + "%";
+  });
+  xhr.addEventListener("load", () => {
+    $("uploadBar").classList.remove("visible");
+    $("uploadFill").style.width = "0%";
+    if (xhr.status >= 200 && xhr.status < 300) {
+      toast("Upload complete — processing started.", "ok");
+      pollStatus();
+    } else {
+      let msg = "Upload failed.";
+      try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e) {}
+      toast(msg, "err");
+    }
+  });
+  xhr.addEventListener("error", () => toast("Network error during upload.", "err"));
+  xhr.send(fd);
+  $("uploadBtn").disabled = true;
+});
+
+const STATUS_META = {
+  idle:    { icon: "●", title: "Ready when you are",    sub: "Scroll down and upload a clip to get started." },
+  running: { icon: "⚙", title: "Processing your video",  sub: "Hold tight — this can take a few minutes on CPU." },
+  done:    { icon: "✓", title: "Done!",                  sub: "Your tracked video is ready below." },
+  error:   { icon: "✕", title: "Something went wrong",   sub: "Check the server console for details." },
+};
+
+async function pollStatus() {
+  try {
+    const r = await fetch("/status", { cache: "no-store" });
+    const s = await r.json();
+    const el = $("status");
+    el.className = "status " + s.status;
+    const meta = STATUS_META[s.status] || STATUS_META.idle;
+    $("statusIcon").textContent = meta.icon;
+    $("statusTitle").textContent = meta.title;
+    $("statusSub").textContent = s.stage || s.message || meta.sub;
+
+    if (s.status === "running") {
+      $("progressWrap").style.display = "block";
+      $("progressBar").style.width = (s.progress || 0) + "%";
+      $("elapsed").textContent = (s.elapsed || 0) + "s";
+    } else if (s.status === "done") {
+      $("progressWrap").style.display = "block";
+      $("progressBar").style.width = "100%";
+      $("elapsed").textContent = "";
+    } else {
+      $("progressWrap").style.display = "none";
+      $("elapsed").textContent = "";
+    }
+
+    $("uploadBtn").disabled = (s.status === "running");
+
+    if (lastStatus === "running" && s.status === "done") {
+      setTimeout(() => location.reload(), 800);
+    }
+    lastStatus = s.status;
+  } catch (e) { /* keep polling */ }
+}
+setInterval(pollStatus, 1500);
+pollStatus();
+</script>
+</body>
+</html>
